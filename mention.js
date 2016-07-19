@@ -34,31 +34,58 @@
                     return query.substring(i, caratPos);
                 },
                 _matcher = function(itemProps) {
-                    var i;
-                    
-                    if(settings.emptyQuery){
-	                    var q = (this.query.toLowerCase()),
-	                    	caratPos = this.$element[0].selectionStart,
-	                    	lastChar = q.slice(caratPos-1,caratPos);
-	                    if(lastChar==settings.delimiter){
-		                    return true;
-	                    }
-                    }
-                    
-                    for (i in settings.queryBy) {
-                        if (itemProps[settings.queryBy[i]]) {
-                            var item = itemProps[settings.queryBy[i]].toLowerCase(),
-                                usernames = (this.query.toLowerCase()).match(new RegExp(settings.delimiter + '\\w+', "g")),
-                                j;
-                            if ( !! usernames) {
-                                for (j = 0; j < usernames.length; j++) {
-                                    var username = (usernames[j].substring(1)).toLowerCase(),
-                                        re = new RegExp(settings.delimiter + item, "g"),
-                                        used = ((this.query.toLowerCase()).match(re));
+                    // default value for queryBy is [settings.key],
+                    if(settings.queryBy.length == 0)
+                        settings.queryBy = [settings.key]
 
-                                    if (item.indexOf(username) != -1 && used === null) {
-                                        return true;
-                                    }
+                    // local variable
+                    var current_delimiter = (itemProps['delimiter'] ? itemProps['delimiter'] : settings.delimiter),
+                        itemKey = itemProps[settings.key].toLowerCase(),
+                        q = (this.query.toLowerCase()),
+                        caratPos = this.$element[0].selectionStart,
+                        lastChar = q.slice(caratPos-1,caratPos);
+
+                    // list all the usernames already in text (in lower case)
+                    var usernames = (q.toLowerCase().match(new RegExp(current_delimiter + '\\w+', "g"))||[]).map(function(b){ return b.toLowerCase(); })
+
+
+                    var current_query = _extractCurrentQuery(q, caratPos);
+
+                    if (current_query.indexOf(" ") != -1) {
+                        var first_mention = current_query.split(" ",2)[0].toLowerCase();
+
+                        if (usernames.indexOf(first_mention) != -1) {
+                            return false;
+                        }
+
+                    }
+
+                    // query only the word between cursor and the first space/delimiter behind it
+                    var q = (q.substring(0, caratPos).match(new RegExp('([^ '+settings.delimiters+']+)$')) || [''])[0]
+
+                    // in emptyQuery, try to list all but those already selected
+                    if(settings.emptyQuery){
+                        if(lastChar==current_delimiter){
+                            if (usernames.indexOf(current_delimiter+itemKey)==-1)
+                                return true
+                        }
+                    }
+
+                    // at this moment, don't bother to search empty query
+                    if(q == '') return false
+
+                    // list possible answers
+                    for (var i in settings.queryBy) {
+                        if (itemProps[settings.queryBy[i]]) {
+                            var item = itemProps[settings.queryBy[i]].toLowerCase()
+                            if(q.trim().toLowerCase().substring(1)==itemProps[settings.key].toLowerCase())
+                                return false
+                            for (var j = 0; j < usernames.length; j++) {
+                                var username = (usernames[j].substring(1)).toLowerCase(),
+                                    re = new RegExp(current_delimiter + item, "g"),
+                                    used = ((q.toLowerCase()).match(re));
+                                if (item.indexOf(username) != -1 && used === null && usernames.indexOf(current_delimiter+itemProps[settings.key].toLowerCase()) == -1) {
+                                    return true;
                                 }
                             }
                         }
