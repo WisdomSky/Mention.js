@@ -95,7 +95,8 @@ $('#multi-users').mention({
 $("#multi-users").mention({
     users: [], // Array of Objects
     delimiter: '@', // Username Delimiter
-    sensitive : true,
+    sensitive: true,
+    limit: 0,
     queryBy: ['name', 'username'],
     typeaheadOpts: { // Settings for Typeahead
         matcher: _matcher, // Mention.js's custom matcher function, don't change
