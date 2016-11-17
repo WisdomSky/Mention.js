@@ -6,10 +6,15 @@
             this.opts = {
                 users: [],
                 delimiter: '@',
+                delimiters: '',
                 sensitive: true,
                 emptyQuery: false,
-                queryBy: ['name', 'username'],
-                typeaheadOpts: {}
+                key: 'username',
+                name: 'name',
+                image: 'image',
+                queryBy: [],
+                typeaheadOpts: {},
+                limit: 0
             };
 
             var settings = $.extend({}, this.opts, options),
@@ -25,8 +30,7 @@
                     return true;
                 },
                 _extractCurrentQuery = function(query, caratPos) {
-                    var i;
-                    for (i = caratPos; i >= 0; i--) {
+                    for (var i = caratPos; i >= 0; i--) {
                         if (query[i] == settings.delimiter) {
                             break;
                         }
@@ -46,8 +50,11 @@
                         lastChar = q.slice(caratPos-1,caratPos);
 
                     // list all the usernames already in text (in lower case)
-                    var usernames = (q.toLowerCase().match(new RegExp(current_delimiter + '\\w+', "g"))||[]).map(function(b){ return b.toLowerCase(); })
+                    var usernames = (q.toLowerCase().match(new RegExp(current_delimiter + '\\w*', "g"))||[]).map(function(b){ return b.toLowerCase(); })
 
+                    if (settings.limit > 0  && usernames.length > settings.limit) {
+                        return false;
+                    }
 
                     var current_query = _extractCurrentQuery(q, caratPos);
 
@@ -72,7 +79,7 @@
                     }
 
                     // at this moment, don't bother to search empty query
-                    if(q == '') return false
+                    if(q == '') return false;
 
                     // list possible answers
                     for (var i in settings.queryBy) {
@@ -91,21 +98,21 @@
                         }
                     }
                 },
-                _updater = function(item) {
+                _updater = function(item, delimiter) {
                     var data = this.query,
                         caratPos = this.$element[0].selectionStart,
                         i;
-                    
+
                     for (i = caratPos; i >= 0; i--) {
-                        if (data[i] == settings.delimiter) {
+                        if (data[i] == delimiter) {
                             break;
                         }
                     }
                     var replace = data.substring(i, caratPos),
-                    	textBefore = data.substring(0, i),
-                    	textAfter = data.substring(caratPos),
-                    	data = textBefore + settings.delimiter + item + textAfter;
-                    	
+                        textBefore = data.substring(0, i),
+                        textAfter = data.substring(caratPos),
+                        data = textBefore + delimiter + item + textAfter;
+
                     this.tempQuery = data;
 
                     return data;
@@ -124,13 +131,13 @@
                             for (i = 0; i < len; i++) {
                                 var currentRes = items[i];
 
-                                if ((currentRes.username[0] == currentUser)) {
+                                if ((currentRes[settings.key][0] == currentUser)) {
                                     priorities.highest.push(currentRes);
                                 }
-                                else if ((currentRes.username[0].toLowerCase() == currentUser.toLowerCase())) {
+                                else if ((currentRes[settings.key][0].toLowerCase() == currentUser.toLowerCase())) {
                                     priorities.high.push(currentRes);
                                 }
-                                else if (currentRes.username.indexOf(currentUser) != -1) {
+                                else if (currentRes[settings.key].indexOf(currentUser) != -1) {
                                     priorities.med.push(currentRes);
                                 }
                                 else {
@@ -152,30 +159,50 @@
                     var that = this;
                     items = $(items).map(function(i, item) {
 
-                        i = $(that.options.item).attr('data-value', item.username);
+                        i = $(that.options.item).attr('data-value', item[settings.key]);
 
                         var _linkHtml = $('<div />');
 
-                        if (item.image) {
-                            _linkHtml.append('<img class="mention_image" src="' + item.image + '">');
+                        if (item[settings.image]) {
+                            _linkHtml.append('<img class="mention_image" style="max-height: 24px; max-width: 24px; margin-right: 10px" src="' + item[settings.image] + '">');
                         }
-                        if (item.name) {
-                            _linkHtml.append('<b class="mention_name">' + item.name + '</b>');
+                        if (item[settings.name]) {
+                            _linkHtml.append('<b class="mention_name">' + item[settings.name] + '</b>');
                         }
-                        if (item.username) {
-                            _linkHtml.append('<span class="mention_username"> ' + settings.delimiter + item.username + '</span>');
+                        if (item[settings.key]) {
+                            _linkHtml.append('<span class="mention_username"> ' + (item['delimiter'] ? item['delimiter'] : settings.delimiter) + item[settings.key] + '</span>');
                         }
-
-                        i.find('a').html(that.highlighter(_linkHtml.html()));
+                        i.find('a').attr('data-delimiter', (item['delimiter'] ? item['delimiter'] : settings.delimiter)).html(that.highlighter(_linkHtml.html()));
                         return i[0];
                     });
-
                     items.first().addClass('active');
                     this.$menu.html(items);
+                    this.$menu.width(this.$element.outerWidth());
                     return this;
                 };
 
+            // fill settings.delimiters if empty
+            if(settings.delimiters.length==0){
+                settings.delimiters = settings.delimiter
+                for(var i=0; i<settings.users.length; i++){
+                    if(settings.users[i].delimiter)
+                        if(settings.delimiters.indexOf(settings.users[i].delimiter)==-1)
+                            settings.delimiters += settings.users[i].delimiter
+                }
+            }
+
             $.fn.typeahead.Constructor.prototype.render = _render;
+            $.fn.typeahead.Constructor.prototype.select = function () {
+                var val = this.$menu.find('.active').attr('data-value'),
+                    delimiter = this.$menu.find('.active').find('a').attr('data-delimiter')
+                this.$element
+                    .val(this.updater(val, delimiter))
+                    .change()
+                return this.hide()
+            }
+            $.fn.typeahead.Constructor.prototype.updater = function (item, delimiter) {
+                return item
+            }
 
             return this.each(function() {
                 var _this = $(this);
