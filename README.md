@@ -1,4 +1,5 @@
 # Mention.js
+version: 1.0.0
 
 <img src="http://i.imgur.com/pCvqL.png">
 
