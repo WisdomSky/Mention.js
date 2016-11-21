@@ -1,4 +1,4 @@
-/*jslint forin: true */
+/* */
 
 ;(function($) {
     $.fn.extend({
@@ -199,22 +199,51 @@
                     .val(this.updater(val, delimiter))
                     .change()
                 return this.hide()
-            }
+            };
             $.fn.typeahead.Constructor.prototype.updater = function (item, delimiter) {
                 return item
-            }
+            };
 
-            return this.each(function() {
-                var _this = $(this);
-                if (_checkDependencies()) {
-                    _this.typeahead($.extend({
-                        source: settings.users,
-                        matcher: _matcher,
-                        updater: _updater,
-                        sorter: _sorter
-                    }, settings.typeaheadOpts));
-                }
-            });
+            var $this = this;
+            if (settings.users.push == undefined) {
+                $.ajax({
+                    type: 'get',
+                    url: settings.users,
+                    dataType: 'json',
+                    success: function (source) {
+                        $this.each(function () {
+                            var _this = $(this);
+                            if (_checkDependencies()) {
+                                _this.typeahead($.extend({
+                                    source: source,
+                                    matcher: _matcher,
+                                    updater: _updater,
+                                    sorter: _sorter
+                                }, settings.typeaheadOpts))
+                            }
+                        });
+                    },
+                    error: function() {
+                        var _this = this;
+                        setTimeout(function() {
+                            $.ajax(_this);
+                        }, 250);
+                    }
+                });
+            } else {
+                $this.each(function () {
+                    var _this = $(this);
+                    if (_checkDependencies()) {
+                        _this.typeahead($.extend({
+                            source: settings.users,
+                            matcher: _matcher,
+                            updater: _updater,
+                            sorter: _sorter
+                        }, settings.typeaheadOpts))
+                    }
+                });
+            }
+            return this;
         }
     });
 })(jQuery);
