@@ -90,6 +90,13 @@ $('#multi-users').mention({
 });
 ```
 
+## Remote Source
+You may provide a remote url instead of a javascript array for the users parameter. The remote source must return a json encoded string.
+```javascript
+$('#multi-users').mention({
+    users: 'http://mysite.com/users/list'
+});
+```
 
 ## Defaults
 `````javascript
